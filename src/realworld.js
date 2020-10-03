@@ -10,8 +10,16 @@ export const addressPoints = _.range(1, 100).map(x => {
     var randLat = _.random(-0.5, 0.5);
     var randLng = _.random(-0.5, 0.5);
 
-    var randValue = _.random(0, 20);
+    var pm = _.random(0, 20);
+    var temp = _.random(20, 100);
+    var humidity = _.random(20, 100);
 
-    return [randLat + center.lat, randLng + center.lng, randValue];
+    return {
+        lat: randLat + center.lat,
+        lng: randLng + center.lng,
+        pm,
+        temp,
+        humidity
+    }
 });
 
