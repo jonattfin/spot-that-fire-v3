@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from 'react'
-import { Map, TileLayer, withLeaflet } from "react-leaflet";
+import { Map, TileLayer, withLeaflet, LayersControl } from "react-leaflet";
 import HeatmapLayer from "react-leaflet-heatmap-layer";
 import { Sidebar, Tab } from 'react-leaflet-sidetabs'
 import { FiHome, FiChevronRight, FiSettings } from "react-icons/fi";
 import { WiFire, WiHumidity, WiThermometer } from "react-icons/wi";
 import { IconContext } from "react-icons";
 import ReactLeafletMeasure from 'react-leaflet-measure';
+import { GoogleLayer } from 'react-leaflet-google-v2'
+import _ from 'lodash';
 
 import './App.css';
-
-import _ from 'lodash';
 
 import 'leaflet/dist/leaflet.css';
 import { addressPoints } from './realworld';
 
-
 const MeasureControl = withLeaflet(ReactLeafletMeasure);
+const { BaseLayer } = LayersControl;
+
+const key = 'AIzaSyASqQ0o4ifr_b9g6nJMq_BJn5x4b3p85_8';
+
+const terrain = 'TERRAIN';
+const road = 'ROADMAP';
+const satellite = 'SATELLITE';
+const hydrid = 'HYBRID';
 
 const measureOptions = {
     position: 'topleft',
@@ -25,7 +32,7 @@ const measureOptions = {
     secondaryAreaUnit: 'acres',
     activeColor: '#db4a29',
     completedColor: '#9b2d14'
-  };
+};
 
 export default function HeatMap() {
     const [points, setPoints] = useState(addressPoints);
@@ -98,18 +105,39 @@ export default function HeatMap() {
                 </Sidebar>
             </IconContext.Provider>
             <Map center={[46.770439, 23.591423]} zoom={13} style={{ height: '100vh', width: '100vw' }}>
-                <HeatmapLayer
-                    fitBoundsOnLoad
-                    fitBoundsOnUpdate
-                    points={toHeatmap(points)}
-                    longitudeExtractor={m => m[1]}
-                    latitudeExtractor={m => m[0]}
-                    intensityExtractor={m => parseFloat(m[2])} />
-                <TileLayer
+                <MeasureControl {...measureOptions} />
+                <LayersControl position='bottomleft'>
+                    <HeatmapLayer
+                        fitBoundsOnLoad
+                        fitBoundsOnUpdate
+                        points={toHeatmap(points)}
+                        longitudeExtractor={m => m[1]}
+                        latitudeExtractor={m => m[0]}
+                        intensityExtractor={m => parseFloat(m[2])} />
+                    <BaseLayer name='OpenStreetMap.Mapnik'>
+                        <TileLayer url="http://{s}.tile.osm.org/{z}/{x}/{y}.png" />
+                    </BaseLayer>
+                    <BaseLayer checked name='Google Maps Roads'>
+                        <GoogleLayer googlekey={key} maptype={road} />
+                    </BaseLayer>
+                    <BaseLayer name='Google Maps Terrain'>
+                        <GoogleLayer googlekey={key} maptype={terrain} />
+                    </BaseLayer>
+                    <BaseLayer name='Google Maps Satellite'>
+                        <GoogleLayer googlekey={key} maptype={satellite} />
+                    </BaseLayer>
+                    <BaseLayer name='Google Maps Hydrid'>
+                        <GoogleLayer googlekey={key} maptype={hydrid} libraries={['geometry', 'places']} />
+                    </BaseLayer>
+                    <BaseLayer name='Google Maps with Libraries'>
+                        <GoogleLayer googlekey={key} maptype={hydrid} libraries={['geometry', 'places']} />
+                    </BaseLayer>
+                </LayersControl>
+                {/* <TileLayer
                     url='http://{s}.tile.osm.org/{z}/{x}/{y}.png'
                     attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <MeasureControl {...measureOptions} />
+                /> */}
+
             </Map>
         </div>
     )
