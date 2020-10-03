@@ -1,3 +1,9 @@
+Space Apps Challenge 2020
+Challenge: Spot That Fire V3.0
+Team: IoT4Nature
+
+--------------------------------
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
