@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { Map, TileLayer } from "react-leaflet";
+import { Map, TileLayer, withLeaflet } from "react-leaflet";
 import HeatmapLayer from "react-leaflet-heatmap-layer";
 import { Sidebar, Tab } from 'react-leaflet-sidetabs'
 import { FiHome, FiChevronRight, FiSettings } from "react-icons/fi";
 import { WiFire, WiHumidity, WiThermometer } from "react-icons/wi";
 import { IconContext } from "react-icons";
+import ReactLeafletMeasure from 'react-leaflet-measure';
 
 import './App.css';
 
@@ -12,6 +13,19 @@ import _ from 'lodash';
 
 import 'leaflet/dist/leaflet.css';
 import { addressPoints } from './realworld';
+
+
+const MeasureControl = withLeaflet(ReactLeafletMeasure);
+
+const measureOptions = {
+    position: 'topleft',
+    primaryLengthUnit: 'meters',
+    secondaryLengthUnit: 'kilometers',
+    primaryAreaUnit: 'sqmeters',
+    secondaryAreaUnit: 'acres',
+    activeColor: '#db4a29',
+    completedColor: '#9b2d14'
+  };
 
 export default function HeatMap() {
     const [points, setPoints] = useState(addressPoints);
@@ -25,11 +39,14 @@ export default function HeatMap() {
                 let { currentLocation, sensors } = data;
                 let [lng, lat] = currentLocation.coordinates;
 
-                let value = 0;
-                let currentSensors = sensors.filter(s => s.title === "PM10");
-                if (currentSensors.length > 0) {
-                    value = parseInt(currentSensors[0].lastMeasurement.value, 10) * 100;
-                }
+                let items = { PM10: 0, Temperatur: 0, "rel. Luftfeuchte": 0 };
+                _.forEach(items, (value, key) => {
+                    let currentSensors = sensors.filter(s => s.title === key);
+                    if (currentSensors.length > 0) {
+                        value = parseInt(currentSensors[0].lastMeasurement.value, 10);
+                        items[key] = value;
+                    }
+                });
 
                 var points = [...addressPoints];
                 _.range(0, 10).forEach(() => {
@@ -39,9 +56,9 @@ export default function HeatMap() {
                     let p = {
                         lat: lat + randLat,
                         lng: lng + randLng,
-                        pm: value,
-                        temp: 100,
-                        humidity: 100,
+                        pm: items.PM10 * 10,
+                        temp: items.Temperatur,
+                        humidity: items["rel. Luftfeuchte"],
                     };
                     points.push(p);
                 })
@@ -63,15 +80,15 @@ export default function HeatMap() {
                     onClose={() => { setCollapsed(true); }}
                 >
                     <Tab id="home" header="Home" icon={<FiHome />}>
-                        <p>No place like home!</p>
+                        <p>There's no place like home!!!</p>
                     </Tab>
-                    <Tab id="pm" header="What's the particle matter?" icon={<WiFire />}>
+                    <Tab id="pm" header="Particle matter" icon={<WiFire />}>
                         {renderItems(points, 'pm')}
                     </Tab>
-                    <Tab id="temp" header="What's the temperature?" icon={<WiThermometer />}>
+                    <Tab id="temp" header="Temperature" icon={<WiThermometer />}>
                         {renderItems(points, 'temp')}
                     </Tab>
-                    <Tab id="humidity" header="What's the humidity?" icon={<WiHumidity />}>
+                    <Tab id="humidity" header="Humidity" icon={<WiHumidity />}>
                         {renderItems(points, 'humidity')}
                     </Tab>
                     <Tab id="settings" header="Settings" anchor="bottom" icon={<FiSettings />}>
@@ -92,6 +109,7 @@ export default function HeatMap() {
                     url='http://{s}.tile.osm.org/{z}/{x}/{y}.png'
                     attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                 />
+                <MeasureControl {...measureOptions} />
             </Map>
         </div>
     )
@@ -105,20 +123,23 @@ function toHeatmap(points) {
 
 function renderItems(points, key) {
     let orderedPoints = _.orderBy(points, key, 'desc')
-    const listRows = orderedPoints.map((p) => {
-        return (<tr>
-            <td>{p[key]}</td>
-            <td>{p.lat}</td>
-            <td>{p.lng}</td>
-        </tr>)
+    const listRows = orderedPoints.map((p, index) => {
+        return (
+            <tr>
+                <td>{p[key]}</td>
+                <td>{p.lat}</td>
+                <td>{p.lng}</td>
+                <td>{index + 1}</td>
+            </tr>)
     });
 
     return (
         <table className="customers">
             <tr>
                 <th>{key}</th>
-                <th>lat</th>
-                <th>long</th>
+                <th>latitude</th>
+                <th>longitude</th>
+                <th>index</th>
             </tr>
             {listRows}
         </table>

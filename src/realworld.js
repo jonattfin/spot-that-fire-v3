@@ -6,7 +6,7 @@ var center = {
     lng: 23.5767
 };
 
-export const addressPoints = _.range(1, 100).map(x => {
+export const addressPoints = _.range(0, 90).map(x => {
     var randLat = _.random(-0.5, 0.5);
     var randLng = _.random(-0.5, 0.5);
 
