@@ -19,7 +19,8 @@ export const addressPoints = _.range(0, 90).map(x => {
         lng: randLng + center.lng,
         pm,
         temp,
-        humidity
+        humidity,
+        flame: 0
     }
 });
 
