@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Map, TileLayer, withLeaflet, LayersControl } from "react-leaflet";
 import HeatmapLayer from "react-leaflet-heatmap-layer";
 import { Sidebar, Tab } from 'react-leaflet-sidetabs'
-import { FiHome, FiChevronRight, FiSettings, FiCloudSnow } from "react-icons/fi";
+import { FiHome, FiChevronRight, FiSettings, FiCloudSnow, FiRefreshCcw } from "react-icons/fi";
 import { WiFire, WiHumidity, WiThermometer } from "react-icons/wi";
 import { IconContext } from "react-icons";
 import ReactLeafletMeasure from 'react-leaflet-measure';
@@ -35,14 +35,16 @@ const measureOptions = {
 };
 
 export default function HeatMap() {
-    const [seconds, setSeconds] = useState(1);
     const [points, setPoints] = useState(addressPoints);
     const [collapsed, setCollapsed] = useState(true);
     const [selected, setSelected] = useState('home');
 
     useEffect(() => {
-        const timer = setInterval(() => {      
-            fetch('https://api.opensensemap.org/boxes/5f733f12821102001b8ad0c1')
+        Refresh();
+    }, []);
+
+    function Refresh() {
+        fetch('https://api.opensensemap.org/boxes/5f733f12821102001b8ad0c1')
             .then(response => response.json())
             .then(data => {
                 let { currentLocation, sensors } = data;
@@ -75,14 +77,7 @@ export default function HeatMap() {
 
                 setPoints(points);
             });
-            
-            setSeconds(seconds + 1);
-            
-        }, 10*1000);
-
-        // clearing interval
-        return () => clearInterval(timer);
-    });
+    }
 
     return (
         <div>
@@ -93,11 +88,10 @@ export default function HeatMap() {
                     collapsed={collapsed}
                     closeIcon={<FiChevronRight />}
                     selected={selected}
-                    onOpen={(id) => { setSelected(id); setCollapsed(false); console.log(id) }}
+                    onOpen={(id) => { setSelected(id); setCollapsed(false); if (id === "refresh") { setCollapsed(true); Refresh(); } console.log(id); }}
                     onClose={() => { setCollapsed(true); }}
                 >
-                    <Tab id="home" header="Home" icon={<FiHome />}>
-                        <p>There's no place like home!!!</p>
+                    <Tab id="refresh" header="Refresh" icon={<FiRefreshCcw />}>
                     </Tab>
                     <Tab id="pm" header="Particle matter(Smoke)" icon={<FiCloudSnow />}>
                         {renderItems(points, 'pm')}
