@@ -44,7 +44,7 @@ export default function HeatMap() {
     }, []);
 
     function Refresh() {
-        fetch('https://api.opensensemap.org/boxes/5f733f12821102001b8ad0c1')
+        fetch('https://api.opensensemap.org/boxes/5f788885e6255b001b4cfb3c')
             .then(response => response.json())
             .then(data => {
                 let { currentLocation, sensors } = data;
