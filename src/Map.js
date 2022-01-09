@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Map, TileLayer, withLeaflet, LayersControl } from "react-leaflet";
 import HeatmapLayer from "react-leaflet-heatmap-layer";
 import { Sidebar, Tab } from 'react-leaflet-sidetabs'
-import { FiHome, FiChevronRight, FiSettings, FiCloudSnow, FiRefreshCcw } from "react-icons/fi";
+import { FiChevronRight, FiSettings, FiCloudSnow } from "react-icons/fi";
 import { WiFire, WiHumidity, WiThermometer } from "react-icons/wi";
 import { IconContext } from "react-icons";
 import ReactLeafletMeasure from 'react-leaflet-measure';
@@ -12,12 +12,12 @@ import _ from 'lodash';
 import './App.css';
 
 import 'leaflet/dist/leaflet.css';
-import { addressPoints } from './realworld';
+import Api from './realworld';
 
 const MeasureControl = withLeaflet(ReactLeafletMeasure);
 const { BaseLayer } = LayersControl;
 
-const key = 'AIzaSyASqQ0o4ifr_b9g6nJMq_BJn5x4b3p85_8';
+const googleKey = 'AIzaSyASqQ0o4ifr_b9g6nJMq_BJn5x4b3p85_8';
 
 const terrain = 'TERRAIN';
 const road = 'ROADMAP';
@@ -35,48 +35,20 @@ const measureOptions = {
 };
 
 export default function HeatMap() {
-    const [points, setPoints] = useState(addressPoints);
+    const [points, setPoints] = useState([]);
     const [collapsed, setCollapsed] = useState(true);
     const [selected, setSelected] = useState('home');
 
     useEffect(() => {
-        Refresh();
+        async function fetchData() {
+            var data = await Api.fetchData();
+            setPoints(data);
+        }
+        fetchData();
     }, []);
 
     function Refresh() {
-        fetch('https://api.opensensemap.org/boxes/5f788885e6255b001b4cfb3c')
-            .then(response => response.json())
-            .then(data => {
-                let { currentLocation, sensors } = data;
-                let [lng, lat] = currentLocation.coordinates;
 
-                let items = { PM10: 0, Temperatur: 0, "rel. Luftfeuchte": 0 };
-                _.forEach(items, (value, key) => {
-                    let currentSensors = sensors.filter(s => s.title === key);
-                    if (currentSensors.length > 0) {
-                        value = parseInt(currentSensors[0].lastMeasurement.value, 10);
-                        items[key] = value;
-                    }
-                });
-
-                var points = [...addressPoints];
-                _.range(0, 10).forEach(() => {
-                    var randLat = _.random(-0.1, 0.1);
-                    var randLng = _.random(-0.1, 0.1);
-
-                    let p = {
-                        lat: lat + randLat,
-                        lng: lng + randLng,
-                        pm: items.PM10 * 10,
-                        temp: items.Temperatur,
-                        humidity: items["rel. Luftfeuchte"],
-                        flame: 1
-                    };
-                    points.push(p);
-                })
-
-                setPoints(points);
-            });
     }
 
     return (
@@ -91,19 +63,25 @@ export default function HeatMap() {
                     onOpen={(id) => { setSelected(id); setCollapsed(false); if (id === "refresh") { setCollapsed(true); Refresh(); } console.log(id); }}
                     onClose={() => { setCollapsed(true); }}
                 >
-                    <Tab id="refresh" header="Refresh" icon={<FiRefreshCcw />}>
+                    {/* <Tab id="refresh" header="Refresh" icon={<FiRefreshCcw />}>
+                    </Tab> */}
+                    <Tab id="pm10" header="Particle matter - PM10 (Smoke)" icon={<FiCloudSnow />}>
+                        {renderItems(points, 'pm10')}
                     </Tab>
-                    <Tab id="pm" header="Particle matter(Smoke)" icon={<FiCloudSnow />}>
-                        {renderItems(points, 'pm')}
+                    <Tab id="pm25" header="Particle matter - PM2.5 (Smoke)" icon={<FiCloudSnow />}>
+                        {renderItems(points, 'pm25')}
                     </Tab>
                     <Tab id="flame" header="Flame" icon={<WiFire />}>
                         {renderItems(points, 'flame')}
                     </Tab>
                     <Tab id="temp" header="Temperature" icon={<WiThermometer />}>
-                        {renderItems(points, 'temp')}
+                        {renderItems(points, 'temperature')}
                     </Tab>
                     <Tab id="humidity" header="Humidity" icon={<WiHumidity />}>
                         {renderItems(points, 'humidity')}
+                    </Tab>
+                    <Tab id="pressure" header="Pressure" icon={<WiHumidity />}>
+                        {renderItems(points, 'pressure')}
                     </Tab>
                     <Tab id="settings" header="Settings" anchor="bottom" icon={<FiSettings />}>
                         <p>We don't want privacy so much as privacy settings!</p>
@@ -125,19 +103,19 @@ export default function HeatMap() {
                         <TileLayer url="http://{s}.tile.osm.org/{z}/{x}/{y}.png" />
                     </BaseLayer>
                     <BaseLayer checked name='Google Maps Roads'>
-                        <GoogleLayer googlekey={key} maptype={road} />
+                        <GoogleLayer googlekey={googleKey} maptype={road} />
                     </BaseLayer>
                     <BaseLayer name='Google Maps Terrain'>
-                        <GoogleLayer googlekey={key} maptype={terrain} />
+                        <GoogleLayer googlekey={googleKey} maptype={terrain} />
                     </BaseLayer>
                     <BaseLayer name='Google Maps Satellite'>
-                        <GoogleLayer googlekey={key} maptype={satellite} />
+                        <GoogleLayer googlekey={googleKey} maptype={satellite} />
                     </BaseLayer>
                     <BaseLayer name='Google Maps Hydrid'>
-                        <GoogleLayer googlekey={key} maptype={hydrid} libraries={['geometry', 'places']} />
+                        <GoogleLayer googlekey={googleKey} maptype={hydrid} libraries={['geometry', 'places']} />
                     </BaseLayer>
                     <BaseLayer name='Google Maps with Libraries'>
-                        <GoogleLayer googlekey={key} maptype={hydrid} libraries={['geometry', 'places']} />
+                        <GoogleLayer googlekey={googleKey} maptype={hydrid} libraries={['geometry', 'places']} />
                     </BaseLayer>
                 </LayersControl>
                 {/* <TileLayer
@@ -152,7 +130,7 @@ export default function HeatMap() {
 
 function toHeatmap(points) {
     return points.map(p => {
-        return [p.lat, p.lng, p.pm];
+        return [p.lat, p.lng, p.flame];
     })
 }
 
@@ -160,23 +138,24 @@ function renderItems(points, key) {
     let orderedPoints = _.orderBy(points, key, 'desc')
     const listRows = orderedPoints.map((p, index) => {
         return (
-            <tr>
+            <tr key={`key_${p[key]}_${index}`}>
+                <td>{p.name}</td>
                 <td>{p[key]}</td>
-                <td>{p.lat}</td>
-                <td>{p.lng}</td>
-                <td>{index + 1}</td>
-            </tr>)
+            </tr>
+        )
     });
 
     return (
         <table className="customers">
-            <tr>
-                <th>{key}</th>
-                <th>latitude</th>
-                <th>longitude</th>
-                <th>index</th>
-            </tr>
-            {listRows}
+            <thead>
+                <tr>
+                    <th>name</th>
+                    <th>{key}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {listRows}
+            </tbody>
         </table>
     )
 }
