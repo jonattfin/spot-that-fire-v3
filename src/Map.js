@@ -12,7 +12,7 @@ import _ from 'lodash';
 import './App.css';
 
 import 'leaflet/dist/leaflet.css';
-import { addressPoints } from './realworld';
+import Api from './realworld';
 
 const MeasureControl = withLeaflet(ReactLeafletMeasure);
 const { BaseLayer } = LayersControl;
@@ -35,7 +35,7 @@ const measureOptions = {
 };
 
 export default function HeatMap() {
-    const [points, setPoints] = useState(addressPoints);
+    const [points, setPoints] = useState([]);
     const [collapsed, setCollapsed] = useState(true);
     const [selected, setSelected] = useState('home');
 
@@ -43,40 +43,9 @@ export default function HeatMap() {
         Refresh();
     }, []);
 
-    function Refresh() {
-        fetch('https://api.opensensemap.org/boxes/5f788885e6255b001b4cfb3c')
-            .then(response => response.json())
-            .then(data => {
-                let { currentLocation, sensors } = data;
-                let [lng, lat] = currentLocation.coordinates;
-
-                let items = { PM10: 0, Temperatur: 0, "rel. Luftfeuchte": 0 };
-                _.forEach(items, (value, key) => {
-                    let currentSensors = sensors.filter(s => s.title === key);
-                    if (currentSensors.length > 0) {
-                        value = parseInt(currentSensors[0].lastMeasurement.value, 10);
-                        items[key] = value;
-                    }
-                });
-
-                var points = [...addressPoints];
-                _.range(0, 10).forEach(() => {
-                    var randLat = _.random(-0.1, 0.1);
-                    var randLng = _.random(-0.1, 0.1);
-
-                    let p = {
-                        lat: lat + randLat,
-                        lng: lng + randLng,
-                        pm: items.PM10 * 10,
-                        temp: items.Temperatur,
-                        humidity: items["rel. Luftfeuchte"],
-                        flame: 1
-                    };
-                    points.push(p);
-                })
-
-                setPoints(points);
-            });
+    async function Refresh() {
+        var data = await Api.fetchData();
+        setPoints(data);
     }
 
     return (
@@ -93,14 +62,17 @@ export default function HeatMap() {
                 >
                     <Tab id="refresh" header="Refresh" icon={<FiRefreshCcw />}>
                     </Tab>
-                    <Tab id="pm" header="Particle matter(Smoke)" icon={<FiCloudSnow />}>
-                        {renderItems(points, 'pm')}
+                    <Tab id="pm25" header="Particle matter(Smoke) - PM2.5" icon={<FiCloudSnow />}>
+                        {renderItems(points, 'pm25')}
+                    </Tab>
+                    <Tab id="pm10" header="Particle matter(Smoke) - PM10" icon={<FiCloudSnow />}>
+                        {renderItems(points, 'pm10')}
                     </Tab>
                     <Tab id="flame" header="Flame" icon={<WiFire />}>
                         {renderItems(points, 'flame')}
                     </Tab>
                     <Tab id="temp" header="Temperature" icon={<WiThermometer />}>
-                        {renderItems(points, 'temp')}
+                        {renderItems(points, 'temperature')}
                     </Tab>
                     <Tab id="humidity" header="Humidity" icon={<WiHumidity />}>
                         {renderItems(points, 'humidity')}
@@ -152,7 +124,7 @@ export default function HeatMap() {
 
 function toHeatmap(points) {
     return points.map(p => {
-        return [p.lat, p.lng, p.pm];
+        return [p.lat, p.lng, p.flame];
     })
 }
 
@@ -160,21 +132,18 @@ function renderItems(points, key) {
     let orderedPoints = _.orderBy(points, key, 'desc')
     const listRows = orderedPoints.map((p, index) => {
         return (
-            <tr>
+            <tr key={`key_${p[key]}_${index}`}>
+                <td>{p.name}</td>
                 <td>{p[key]}</td>
-                <td>{p.lat}</td>
-                <td>{p.lng}</td>
-                <td>{index + 1}</td>
-            </tr>)
+            </tr>
+        )
     });
 
     return (
         <table className="customers">
             <tr>
-                <th>{key}</th>
-                <th>latitude</th>
-                <th>longitude</th>
-                <th>index</th>
+                <th>name</th>
+                <th>value</th>
             </tr>
             {listRows}
         </table>
